@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from .core_types import SiteUUID, EventStreamUUID, VectorClockType
 from .site import Site
 from .event_stream import EventStream, Base
+from .vector_clock import VectorClock
 
 def generate_uuid() -> uuid.UUID:
     """Generates a unique UUID."""
@@ -62,7 +63,6 @@ class Event(Base):
         """
         Convert a sequence of events into a single VectorClock.
         """
-        from .vector_clock import VectorClock
         combined_clock = {}
         for event in events:
             combined_clock = VectorClock.merge(combined_clock, event.vector_clock)
@@ -99,7 +99,6 @@ class View(Base):
                     self.snapshot.pop(key, None)
         
         # Update vector clock
-        from .vector_clock import VectorClock
         self.vector_clock = VectorClock.merge(self.vector_clock, event.vector_clock)
 
 # Example of a specific EventStream with Pydantic event type
