@@ -12,6 +12,8 @@
 
 - **Always Locally Writeable**: Perform write operations locally without waiting for global consensus, ensuring low latency and high availability.
 - **Multi-Master Architecture**: Multiple masters can handle write operations simultaneously, facilitating horizontal scalability and fault tolerance.
+- **Lightweight**: run on servers backed by postgres, or IoT backed by key-value index files.  Your call.
+- **Arbitrary topology**: Run it on servers remotely AND key-value index files on IoT.  Run three nodes locally and/or five nodes over five WANs. Your call. Unlike some globally replicated database solutions, GunDB doesn't dictate crazy things like 3 highly available database per site and redundant low-latency WAN links.
 - **Conflict-Free Replicated Data Types (CRDTs)**: Guarantees eventual consistency without the complexities of conflict resolution.
 - **Global Event Sourcing**: Captures all changes as a sequence of events, enabling auditability, rollback capabilities, and real-time data processing.
 
