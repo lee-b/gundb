@@ -2,9 +2,9 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from gundb.models import Base, EventStream, Event, View, UserStream, UserEvent, UserCreatedEvent, UserUpdatedEvent
-from gundb.site import Site
-from gundb.vector_clock import VectorClock
+from src.gundb.models import Base, EventStream, Event, View, UserStream, UserEvent, UserCreatedEvent, UserUpdatedEvent
+from src.gundb.site import Site
+from src.gundb.vector_clock import VectorClock
 
 @pytest.fixture(scope="function")
 def db_session():
