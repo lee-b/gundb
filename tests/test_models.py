@@ -1,58 +1,107 @@
-import unittest
-import uuid
-from src.gundb.models import EventStream, Event, View, UserStream, UserCreatedEvent, UserUpdatedEvent, EventStreamUUID
-from src.gundb.site import Site, SiteUUID
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from src.gundb.models import Base, EventStream, Event, View, UserStream, UserEvent, UserCreatedEvent, UserUpdatedEvent
+from src.gundb.site import Site
+from src.gundb.vector_clock import VectorClock
 
-class TestModels(unittest.TestCase):
+@pytest.fixture(scope="function")
+def db_session():
+    engine = create_engine('sqlite:///:memory:')
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    yield session
+    session.close()
 
-    def setUp(self):
-        self.site = Site()
-        self.stream_id = EventStreamUUID(uuid.uuid4())
+def test_event_stream_creation(db_session):
+    user_stream = UserStream()
+    db_session.add(user_stream)
+    db_session.commit()
 
-    def test_event_stream_creation(self):
-        stream = EventStream("test_stream")
-        self.assertIsInstance(stream.id, uuid.UUID)
-        self.assertEqual(stream.name, "test_stream")
+    assert user_stream.id is not None
+    assert user_stream.name == "user_stream"
+    assert user_stream.get_type() == UserEvent
 
-    def test_event_creation(self):
-        event = Event(self.stream_id, self.site)
-        self.assertIsInstance(event.id, uuid.UUID)
-        self.assertEqual(event.stream_id, self.stream_id)
-        self.assertIsInstance(event.vector_clock, dict)
-        self.assertIn((self.site.id, self.stream_id), event.vector_clock)
+def test_event_creation(db_session):
+    user_stream = UserStream()
+    db_session.add(user_stream)
+    db_session.commit()
 
-    def test_view_creation(self):
-        view = View(self.stream_id)
-        self.assertIsInstance(view.id, uuid.UUID)
-        self.assertEqual(view.stream_id, self.stream_id)
-        self.assertIsInstance(view.snapshot, dict)
-        self.assertIsInstance(view.vector_clock, dict)
+    site = Site()
+    vector_clock = VectorClock.increment({}, site, str(user_stream.id))
+    user_data = UserEvent(username="test_user", email="test@example.com", age=30)
+    event = UserCreatedEvent(stream=user_stream, vector_clock=vector_clock, data=user_data)
+    
+    db_session.add(event)
+    db_session.commit()
 
-    def test_user_stream_creation(self):
-        user_stream = UserStream()
-        self.assertIsInstance(user_stream.id, uuid.UUID)
-        self.assertEqual(user_stream.name, "user_stream")
+    assert event.id is not None
+    assert event.stream_id == user_stream.id
+    assert event.type == "UserCreatedEvent"
+    assert event.data == {"username": "test_user", "email": "test@example.com", "age": 30}
 
-    def test_user_created_event(self):
-        event = UserCreatedEvent(self.stream_id, self.site, data={"username": "test_user"})
-        self.assertIsInstance(event.id, uuid.UUID)
-        self.assertEqual(event.stream_id, self.stream_id)
-        self.assertEqual(event.data, {"username": "test_user"})
+def test_view_creation_and_update(db_session):
+    user_stream = UserStream()
+    db_session.add(user_stream)
+    db_session.commit()
 
-    def test_user_updated_event(self):
-        event = UserUpdatedEvent(self.stream_id, self.site, data={"email": "test@example.com"})
-        self.assertIsInstance(event.id, uuid.UUID)
-        self.assertEqual(event.stream_id, self.stream_id)
-        self.assertEqual(event.data, {"email": "test@example.com"})
+    site = Site()
+    vector_clock = VectorClock.increment({}, site, str(user_stream.id))
+    user_data = UserEvent(username="test_user", email="test@example.com", age=30)
+    event = UserCreatedEvent(stream=user_stream, vector_clock=vector_clock, data=user_data)
 
-    def test_site_creation(self):
-        site = Site()
-        self.assertIsInstance(site.id, uuid.UUID)
+    user_stream.apply_event(event, site)
+    db_session.commit()
 
-    def test_site_creation_with_id(self):
-        site_id = SiteUUID(uuid.uuid4())
-        site = Site(site_id)
-        self.assertEqual(site.id, site_id)
+    assert user_stream.view is not None
+    assert user_stream.view.snapshot == {"username": "test_user", "email": "test@example.com", "age": 30}
+    assert user_stream.view.vector_clock == event.vector_clock
 
-if __name__ == '__main__':
-    unittest.main()
+def test_multiple_events_and_sorting(db_session):
+    user_stream = UserStream()
+    db_session.add(user_stream)
+    db_session.commit()
+
+    site1 = Site()
+    site2 = Site()
+
+    # Create first event
+    vc1 = VectorClock.increment({}, site1, str(user_stream.id))
+    user_data1 = UserEvent(username="user1", email="user1@example.com", age=25)
+    event1 = UserCreatedEvent(stream=user_stream, vector_clock=vc1, data=user_data1)
+
+    # Create second event
+    vc2 = VectorClock.increment(vc1, site2, str(user_stream.id))
+    user_data2 = UserEvent(username="user1", email="updated@example.com", age=26)
+    event2 = UserUpdatedEvent(stream=user_stream, vector_clock=vc2, data=user_data2)
+
+    # Apply events in reverse order
+    user_stream.update_with_events([event2, event1], site1)
+    db_session.commit()
+
+    assert user_stream.view.snapshot == {"username": "user1", "email": "updated@example.com", "age": 26}
+    assert user_stream.view.vector_clock == event2.vector_clock
+
+def test_event_stream_validation(db_session):
+    user_stream = UserStream()
+    
+    valid_data = {"username": "valid_user", "email": "valid@example.com", "age": 30}
+    invalid_data = {"username": "invalid_user", "email": "invalid@example.com"}  # Missing 'age'
+
+    assert user_stream.validate_data(valid_data)
+    
+    with pytest.raises(ValueError):
+        user_stream.validate_data(invalid_data)
+
+def test_get_schema(db_session):
+    user_stream = UserStream()
+    schema = user_stream.get_schema()
+
+    assert "properties" in schema
+    assert "username" in schema["properties"]
+    assert "email" in schema["properties"]
+    assert "age" in schema["properties"]
+
+if __name__ == "__main__":
+    pytest.main()
