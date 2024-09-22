@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, NewType
 from sqlalchemy import (
     Column,
     String,
@@ -13,15 +13,18 @@ from sqlalchemy.orm import (
     declarative_base,
     relationship,
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from .vector_clock import VectorClock
-from .site import Site
+from .site import Site, SiteUUID
 
 Base = declarative_base()
 
-def generate_uuid() -> str:
-    """Generates a unique UUID string."""
-    return str(uuid.uuid4())
+EventStreamUUID = NewType('EventStreamUUID', uuid.UUID)
+
+def generate_uuid() -> uuid.UUID:
+    """Generates a unique UUID."""
+    return uuid.uuid4()
 
 class EventStream(Base):
     """
@@ -30,7 +33,7 @@ class EventStream(Base):
     """
     __tablename__ = 'event_streams'
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=generate_uuid)
     name = Column(String, unique=True, nullable=False)
 
     # Relationships
@@ -65,8 +68,8 @@ class Event(Base):
     """
     __tablename__ = 'events'
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    stream_id = Column(String(36), ForeignKey('event_streams.id'), nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=generate_uuid)
+    stream_id = Column(UUID(as_uuid=True), ForeignKey('event_streams.id'), nullable=False)
     timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     vector_clock = Column(JSON, nullable=False, default=dict)
     type = Column(String, nullable=False)
@@ -82,7 +85,7 @@ class Event(Base):
         'polymorphic_on': type
     }
 
-    def __init__(self, stream_id: str, site: Site, vector_clock: Optional[Dict[Tuple[str, str], int]] = None, data: Optional[Dict[str, Any]] = None):
+    def __init__(self, stream_id: EventStreamUUID, site: Site, vector_clock: Optional[Dict[Tuple[SiteUUID, EventStreamUUID], int]] = None, data: Optional[Dict[str, Any]] = None):
         self.stream_id = stream_id
         self.vector_clock = vector_clock or {}
         self.data = data or {}
@@ -95,15 +98,15 @@ class View(Base):
     """
     __tablename__ = 'views'
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    stream_id = Column(String(36), ForeignKey('event_streams.id'), unique=True, nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=generate_uuid)
+    stream_id = Column(UUID(as_uuid=True), ForeignKey('event_streams.id'), unique=True, nullable=False)
     snapshot = Column(JSON, nullable=True, default=dict)
     vector_clock = Column(JSON, nullable=False, default=dict)
 
     # Relationships
     stream = relationship("EventStream", back_populates="view")
 
-    def __init__(self, stream_id: str, snapshot: Optional[Dict[str, Any]] = None, vector_clock: Optional[Dict[Tuple[str, str], int]] = None):
+    def __init__(self, stream_id: EventStreamUUID, snapshot: Optional[Dict[str, Any]] = None, vector_clock: Optional[Dict[Tuple[SiteUUID, EventStreamUUID], int]] = None):
         self.stream_id = stream_id
         self.snapshot = snapshot or {}
         self.vector_clock = vector_clock or {}
@@ -137,7 +140,7 @@ class UserCreatedEvent(Event):
         'polymorphic_identity': 'user_created',
     }
 
-    def __init__(self, stream_id: str, site: Site, vector_clock: Optional[Dict[Tuple[str, str], int]] = None, data: Optional[Dict[str, Any]] = None):
+    def __init__(self, stream_id: EventStreamUUID, site: Site, vector_clock: Optional[Dict[Tuple[SiteUUID, EventStreamUUID], int]] = None, data: Optional[Dict[str, Any]] = None):
         super().__init__(stream_id, site, vector_clock, data)
 
 class UserUpdatedEvent(Event):
@@ -145,5 +148,5 @@ class UserUpdatedEvent(Event):
         'polymorphic_identity': 'user_updated',
     }
 
-    def __init__(self, stream_id: str, site: Site, vector_clock: Optional[Dict[Tuple[str, str], int]] = None, data: Optional[Dict[str, Any]] = None):
+    def __init__(self, stream_id: EventStreamUUID, site: Site, vector_clock: Optional[Dict[Tuple[SiteUUID, EventStreamUUID], int]] = None, data: Optional[Dict[str, Any]] = None):
         super().__init__(stream_id, site, vector_clock, data)
