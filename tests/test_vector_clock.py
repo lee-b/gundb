@@ -4,18 +4,21 @@ import pytest
 
 from gundb.models import Event
 from gundb.vector_clock import VectorClock
+from gundb.site import Site
+from gundb.event_stream import EventStream
 
 
 def create_mock_event(event_id, vector_clock, timestamp):
     """Helper function to create mock events."""
+    site = Site()
+    stream = EventStream("test_stream", Event)
     event = Event(
-        id=event_id,
-        stream_id="test_stream",
+        stream=stream,
         vector_clock=vector_clock,
-        type="test_event",
-        data={"key": "value"},
-        timestamp=timestamp
+        data={"key": "value"}
     )
+    event.id = event_id
+    event.timestamp = timestamp
     return event
 
 def test_sort_events_linear_causality():
