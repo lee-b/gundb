@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict, Any, Optional, List, Tuple, NewType, Type
+from typing import Dict, Any, Optional, List, Tuple, NewType, Type, Iterator
 from sqlalchemy import (
     Column,
     String,
@@ -118,6 +118,16 @@ class Event(Base):
         self.data = data.dict()
         self.type = self.__class__.__name__
         # The position will be set when the event is applied to the stream
+
+    @classmethod
+    def events_as_vector_clock(cls, events: Iterator['Event']) -> VectorClock:
+        """
+        Convert a sequence of events into a single VectorClock.
+        """
+        combined_clock = {}
+        for event in events:
+            combined_clock = VectorClock.merge(combined_clock, event.vector_clock)
+        return VectorClock(combined_clock)
 
 class View(Base):
     """
