@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import DeclarativeBase
 from .core_types import EventStreamUUID
 from .site import Site
+from .events import Event  # Add this import
 
 class Base(DeclarativeBase):
     pass
@@ -18,11 +19,11 @@ class EventStream(Base):
         self.name: str = name
         self._event_type: Type[BaseModel] = event_type
 
-    def update_with_events(self, events: List['Event'], site: Site):
+    def update_with_events(self, events: List[Event], site: Site):
         for event in events:
             self.apply_event(event, site)
 
-    def apply_event(self, event: 'Event', site: Site):
+    def apply_event(self, event: Event, site: Site):
         # This method should be implemented by subclasses
         raise NotImplementedError
 
