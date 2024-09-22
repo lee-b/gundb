@@ -2,8 +2,8 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from src.gundb.models import Event
-from src.gundb.vector_clock import VectorClock
+from gundb.models import Event
+from gundb.vector_clock import VectorClock
 
 
 def create_mock_event(event_id, vector_clock, timestamp):
