@@ -6,7 +6,7 @@
 
 **WIP**
 
-**GunDB** (Globally UNstoppable DataBase) is a pioneering database solution designed to be **always locally writeable**, **multi-master**, and **conflict-free** with **global replicated event sourcing**. Built with resilience and scalability in mind, Gundb aims to provide a seamless and uninterrupted data experience across distributed systems.
+**GunDB** (Globally UNstoppable DataBase) is a pioneering database solution designed to be **always locally writeable**, **multi-master**, and **conflict-free** with **global replicated event sourcing**. Built with resilience and scalability in mind, Gundb aims to provide a seamless and uninterrupted data experience across distributed systems.  Use cases include resilient local operation and recovery during power failures, wars, embassies under siege... and just when you never want to lose your database, or never want to deal with split-brain recovery scenarios, or multiple customers with split-brain recovery scenarios.
 
 ## Features
 
