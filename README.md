@@ -26,6 +26,10 @@ Gundb is currently an **early Work-In-Progress (WIP)** and a **Proof of Concept 
 
 The `main()` function included in the project serves as a **placeholder** for now. It demonstrates the basic setup and usage of the EventStream system. A dedicated **gundb wrapper script** has been created to facilitate future enhancements and integrations.
 
+## Theory of Operation
+
+For a detailed explanation of how GunDB works under the hood, including its use of vector clocks for conflict-free replication, SQLAlchemy base classes, and node abstractions, please refer to our [Theory of Operation](docs/theory.txt) document.
+
 ## Roadmap
 
 Gundb is actively under development, with plans to evolve into a comprehensive utility for:
@@ -79,3 +83,7 @@ Contributions welcome! Open tickets or PR's at https://github.com/lee-b/gundb/.
 ## LICENSE
 
 Aferro General Public License, version 3.  Contact [Lee Braiden](mailto:lee.braiden@pm.me) if you need to discuss other licensing options.
+=======
+```bash
+poetry run python -m event_stream.main
+```
