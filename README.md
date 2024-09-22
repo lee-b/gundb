@@ -28,7 +28,7 @@ The `main()` function included in the project serves as a **placeholder** for no
 
 ## Theory of Operation
 
-For a detailed explanation of how GunDB works under the hood, including its use of vector clocks for conflict-free replication, SQLAlchemy base classes, and node abstractions, please refer to our [Theory of Operation](docs/theory.txt) document.
+For a detailed explanation of how GunDB works under the hood, including its use of vector clocks for conflict-free replication, SQLAlchemy base classes, and node abstractions, please refer to our [Theory of Operation](docs/theory.md) document.
 
 ## Roadmap
 
