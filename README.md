@@ -16,6 +16,7 @@
 - **Arbitrary topology**: Run it on servers remotely AND key-value index files on IoT.  Run three nodes locally and/or five nodes over five WANs. Your call. Unlike some globally replicated database solutions, GunDB doesn't dictate crazy things like 3 highly available database per site and redundant low-latency WAN links.
 - **Conflict-Free Replicated Data Types (CRDTs)**: Guarantees eventual consistency without the complexities of conflict resolution.
 - **Global Event Sourcing**: Captures all changes as a sequence of events, enabling auditability, rollback capabilities, and real-time data processing.
+- **Arbitrary data synchronization methods**: the actual synchronization method between nodes doesn't matter to the core design; it's a simple, abstract interface for which many implementations are possible. They could vary from high-speed WANs with financial data, custom XML data embedded in RSS feeds, email attachments, or occasional updates on tape. The first implementation will proably be gRPC, though... or something like that.
 
 ## Current Status
 
@@ -30,13 +31,12 @@ The `main()` function included in the project serves as a **placeholder** for no
 Gundb is actively under development, with plans to evolve into a comprehensive utility for:
 
 - **Monitoring Streams**: Real-time monitoring and management of data streams across distributed nodes.
-- **Enhanced Replication**: Robust mechanisms for data replication, ensuring consistency and availability.
-- **Advanced Conflict Resolution**: Sophisticated strategies to handle data conflicts seamlessly.
+- **Communication between nodes**: This is just an abstract interface right now.  We'll probably start with simply sending & receiving events over gRPC or something like that.  The core design means that the methods for doing this are not very important: we could make it work over email or subscriptions to RSS-like XML updates, even (but we won't).
 - **Comprehensive Documentation and Examples**: Detailed guides and use-case examples to assist developers in integrating and utilizing Gundb effectively.
 
-## Installation
+## Building and Installation
 
-Gundb utilizes [Poetry](https://python-poetry.org/) for dependency management and packaging. Follow the steps below to set up Gundb on your local machine.
+GunDB utilizes [Poetry](https://python-poetry.org/) for building. Follow the steps below to set up GunDB on your local machine.
 
 ### Prerequisites
 
@@ -64,23 +64,18 @@ Gundb utilizes [Poetry](https://python-poetry.org/) for dependency management an
     poetry shell
     ```
 
-4. **Set Up the Database**
-
-    Gundb uses SQLite for demonstration purposes. To set up the database, run:
-
-    ```bash
-    poetry run python -m event_stream.main
-    ```
-
-    *Note: This will create an `event_stream.db` SQLite database in the project directory.*
-
 ## Usage
 
-As Gundb is in its early stages, the current usage revolves around the provided `main()` function, which demonstrates the creation of event streams, events, and updating views.
+As GunDB is in its early stages, the current usage revolves around the provided `gundb` executable (a wrapper script around `gundb.__main__.py`, created during `poetry install`), which demonstrates the creation of event streams, events, and updating views.
 
-### Running the Placeholder Main Function
+## Author
 
-Execute the following command to run the placeholder script:
+[Lee Braiden](mailto:lee.braiden@pm.me)
 
-```bash
-poetry run python -m event_stream.main
+## Contributing
+
+Contributions welcome! Open tickets or PR's at https://github.com/lee-b/gundb/.
+
+## LICENSE
+
+Aferro General Public License, version 3.  Contact the [Lee Braiden](mailto:lee.braiden@pm.me) if you need to discuss other licensing options.
