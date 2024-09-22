@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship, declarative_base
 from pydantic import BaseModel
 from .core_types import EventStreamUUID
 from .site import Site
+from .models import Event, View
 
 Base = declarative_base()
 
@@ -34,22 +35,20 @@ class EventStream(Base):
         self.event_counter = 0
         self.latest_merged_event_counter = 0
 
-    def update_with_events(self, events: List['Event'], site: Site):
+    def update_with_events(self, events: List[Event], site: Site):
         """
         Update the stream with a list of events, correctly sorting them using vector clocks.
         """
         from .vector_clock import VectorClock
-        from .models import Event  # Add this import
         sorted_events = VectorClock.sort_events(events)
         for event in sorted_events:
             self.apply_event(event, site)
 
-    def apply_event(self, event: 'Event', site: Site):
+    def apply_event(self, event: Event, site: Site):
         """
         Apply a single event to the stream and update the view.
         """
         from .vector_clock import VectorClock
-        from .models import Event, View  # Add this import
         if not self.view:
             self.view = View(self.id)
         
