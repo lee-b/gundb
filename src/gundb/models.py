@@ -43,7 +43,7 @@ class EventStream(Base):
 
     def __init__(self, name: str, schema: Type[BaseModel]):
         self.name = name
-        self.schema = schema
+        self._schema = schema
 
     def update_with_events(self, events: List['Event'], site: Site):
         """
@@ -67,7 +67,13 @@ class EventStream(Base):
         """
         Validate the data against the Pydantic schema.
         """
-        return self.schema(**data)
+        return self._schema(**data)
+
+    def get_schema(self) -> Type[BaseModel]:
+        """
+        Return the Pydantic schema type associated with this EventStream.
+        """
+        return self._schema
 
 class Event(Base):
     """
@@ -79,11 +85,11 @@ class Event(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=generate_uuid)
     stream_id = Column(UUID(as_uuid=True), ForeignKey('event_streams.id'), nullable=False)
     timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    vector_clock = Column(JSON, nullable=False, default=dict)
+    vector_clock = Column(JSON, nullable=False)
     type = Column(String, nullable=False)
 
-    # To store event data as key-value pairs
-    data = Column(JSON, nullable=True)
+    # To store event data as JSON
+    data = Column(JSON, nullable=False)
 
     # Relationships
     stream = relationship("EventStream", back_populates="events")
@@ -93,12 +99,11 @@ class Event(Base):
         'polymorphic_on': type
     }
 
-    def __init__(self, stream_id: EventStreamUUID, site: Site, vector_clock: Optional[Dict[Tuple[SiteUUID, EventStreamUUID], int]] = None, data: Optional[Dict[str, Any]] = None):
-        self.stream_id = stream_id
-        self.vector_clock = vector_clock or {}
-        self.data = data or {}
-        if not vector_clock:
-            self.vector_clock = {(site.id, stream_id): 1}
+    def __init__(self, stream: EventStream, vector_clock: VectorClock, data: BaseModel):
+        self.stream_id = stream.id
+        self.vector_clock = vector_clock.to_dict()
+        self.data = data.dict()
+        self.type = self.__class__.__name__
 
 class View(Base):
     """
@@ -153,13 +158,7 @@ class UserCreatedEvent(Event):
         'polymorphic_identity': 'user_created',
     }
 
-    def __init__(self, stream_id: EventStreamUUID, site: Site, vector_clock: Optional[Dict[Tuple[SiteUUID, EventStreamUUID], int]] = None, data: Optional[Dict[str, Any]] = None):
-        super().__init__(stream_id, site, vector_clock, data)
-
 class UserUpdatedEvent(Event):
     __mapper_args__ = {
         'polymorphic_identity': 'user_updated',
     }
-
-    def __init__(self, stream_id: EventStreamUUID, site: Site, vector_clock: Optional[Dict[Tuple[SiteUUID, EventStreamUUID], int]] = None, data: Optional[Dict[str, Any]] = None):
-        super().__init__(stream_id, site, vector_clock, data)
