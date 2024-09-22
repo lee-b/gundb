@@ -1,6 +1,5 @@
 import uuid
-from typing import Dict, Any, Optional
-
+from typing import Dict, Any, Optional, List, Tuple
 from sqlalchemy import (
     Column,
     String,
@@ -15,6 +14,8 @@ from sqlalchemy.orm import (
     relationship,
 )
 from sqlalchemy.sql import func
+from .vector_clock import VectorClock
+from .site import Site
 
 Base = declarative_base()
 
@@ -38,6 +39,24 @@ class EventStream(Base):
 
     def __init__(self, name: str):
         self.name = name
+
+    def update_with_events(self, events: List['Event'], site: Site):
+        """
+        Update the stream with a list of events, correctly sorting them using vector clocks.
+        """
+        sorted_events = VectorClock.sort_events(events)
+        for event in sorted_events:
+            self.apply_event(event, site)
+
+    def apply_event(self, event: 'Event', site: Site):
+        """
+        Apply a single event to the stream and update the view.
+        """
+        if not self.view:
+            self.view = View(self.id)
+        
+        self.view.apply_event(event)
+        event.vector_clock = VectorClock.merge_and_increment(event.vector_clock, self.view.vector_clock, site, self)
 
 class Event(Base):
     """
@@ -63,10 +82,12 @@ class Event(Base):
         'polymorphic_on': type
     }
 
-    def __init__(self, stream_id: str, vector_clock: Optional[Dict[str, int]] = None, data: Optional[Dict[str, Any]] = None):
+    def __init__(self, stream_id: str, site: Site, vector_clock: Optional[Dict[Tuple[str, str], int]] = None, data: Optional[Dict[str, Any]] = None):
         self.stream_id = stream_id
         self.vector_clock = vector_clock or {}
         self.data = data or {}
+        if not vector_clock:
+            self.vector_clock = {(site.id, stream_id): 1}
 
 class View(Base):
     """
@@ -77,17 +98,19 @@ class View(Base):
     id = Column(String(36), primary_key=True, default=generate_uuid)
     stream_id = Column(String(36), ForeignKey('event_streams.id'), unique=True, nullable=False)
     snapshot = Column(JSON, nullable=True, default=dict)
+    vector_clock = Column(JSON, nullable=False, default=dict)
 
     # Relationships
     stream = relationship("EventStream", back_populates="view")
 
-    def __init__(self, stream_id: str, snapshot: Optional[Dict[str, Any]] = None):
+    def __init__(self, stream_id: str, snapshot: Optional[Dict[str, Any]] = None, vector_clock: Optional[Dict[Tuple[str, str], int]] = None):
         self.stream_id = stream_id
         self.snapshot = snapshot or {}
+        self.vector_clock = vector_clock or {}
 
     def apply_event(self, event: 'Event'):
         """
-        Apply an event to update the snapshot.
+        Apply an event to update the snapshot and vector clock.
         """
         if event.data:
             for key, value in event.data.items():
@@ -95,6 +118,9 @@ class View(Base):
                     self.snapshot[key] = value
                 else:
                     self.snapshot.pop(key, None)
+        
+        # Update vector clock
+        self.vector_clock = VectorClock.merge(self.vector_clock, event.vector_clock)
 
 # Example of a specific EventStream
 class UserStream(EventStream):
@@ -111,13 +137,13 @@ class UserCreatedEvent(Event):
         'polymorphic_identity': 'user_created',
     }
 
-    def __init__(self, stream_id: str, vector_clock: Optional[Dict[str, int]] = None, data: Optional[Dict[str, Any]] = None):
-        super().__init__(stream_id, vector_clock, data)
+    def __init__(self, stream_id: str, site: Site, vector_clock: Optional[Dict[Tuple[str, str], int]] = None, data: Optional[Dict[str, Any]] = None):
+        super().__init__(stream_id, site, vector_clock, data)
 
 class UserUpdatedEvent(Event):
     __mapper_args__ = {
         'polymorphic_identity': 'user_updated',
     }
 
-    def __init__(self, stream_id: str, vector_clock: Optional[Dict[str, int]] = None, data: Optional[Dict[str, Any]] = None):
-        super().__init__(stream_id, vector_clock, data)
+    def __init__(self, stream_id: str, site: Site, vector_clock: Optional[Dict[Tuple[str, str], int]] = None, data: Optional[Dict[str, Any]] = None):
+        super().__init__(stream_id, site, vector_clock, data)

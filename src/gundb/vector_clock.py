@@ -1,30 +1,35 @@
-from typing import Dict, Any, List, Optional, Set
-from .models import Event
+from typing import Dict, Any, List, Optional, Set, Tuple
 from collections import defaultdict, deque
-
+from .site import Site
 
 class VectorClock:
     """
     Utility class for handling vector clocks.
     """
-    def __init__(self, clock: Optional[Dict[str, int]] = None):
-        self.clock = clock or {}
-
-    def update(self, stream_id: str, counter: int):
-        self.clock[stream_id] = max(self.clock.get(stream_id, 0), counter)
-
-    def increment(self, stream_id: str):
-        self.clock[stream_id] = self.clock.get(stream_id, 0) + 1
-
-    def merge(self, other: 'VectorClock'):
-        for stream_id, counter in other.clock.items():
-            self.clock[stream_id] = max(self.clock.get(stream_id, 0), counter)
-
-    def to_dict(self) -> Dict[str, int]:
-        return self.clock
+    @staticmethod
+    def merge(clock1: Dict[Tuple[str, str], int], clock2: Dict[Tuple[str, str], int]) -> Dict[Tuple[str, str], int]:
+        merged = clock1.copy()
+        for key, value in clock2.items():
+            if key in merged:
+                merged[key] = max(merged[key], value)
+            else:
+                merged[key] = value
+        return merged
 
     @staticmethod
-    def _happened_before(vc1: Dict[str, int], vc2: Dict[str, int]) -> bool:
+    def increment(clock: Dict[Tuple[str, str], int], site: Site, stream_id: str) -> Dict[Tuple[str, str], int]:
+        new_clock = clock.copy()
+        key = (site.id, stream_id)
+        new_clock[key] = new_clock.get(key, 0) + 1
+        return new_clock
+
+    @staticmethod
+    def merge_and_increment(clock1: Dict[Tuple[str, str], int], clock2: Dict[Tuple[str, str], int], site: Site, stream_id: str) -> Dict[Tuple[str, str], int]:
+        merged = VectorClock.merge(clock1, clock2)
+        return VectorClock.increment(merged, site, stream_id)
+
+    @staticmethod
+    def _happened_before(vc1: Dict[Tuple[str, str], int], vc2: Dict[Tuple[str, str], int]) -> bool:
         """
         Determines if vc1 happened before vc2.
         """
@@ -41,7 +46,7 @@ class VectorClock:
         return less_or_equal and strictly_less
 
     @staticmethod
-    def sort_events(events: List[Event]) -> List[Event]:
+    def sort_events(events: List['Event']) -> List['Event']:
         """
         Sort events based on their vector clocks to respect causal dependencies.
         Implements a topological sort where edges represent 'happened-before' relationships.
@@ -50,7 +55,7 @@ class VectorClock:
         # Initialize adjacency list and in-degree count
         adjacency: Dict[str, Set[str]] = defaultdict(set)
         in_degree: Dict[str, int] = defaultdict(int)
-        event_map: Dict[str, Event] = {event.id: event for event in events}
+        event_map: Dict[str, 'Event'] = {event.id: event for event in events}
 
         # Determine dependencies
         for event_a in events:
