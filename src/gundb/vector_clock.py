@@ -1,6 +1,7 @@
 from typing import Dict, Any, List, Optional, Set, Tuple
 from collections import defaultdict, deque
 from .site import Site
+from .models import Event
 
 class VectorClock:
     """
@@ -46,7 +47,7 @@ class VectorClock:
         return less_or_equal and strictly_less
 
     @staticmethod
-    def sort_events(events: List['Event']) -> List['Event']:
+    def sort_events(events: List[Event]) -> List[Event]:
         """
         Sort events based on their vector clocks to respect causal dependencies.
         Implements a topological sort where edges represent 'happened-before' relationships.
@@ -55,7 +56,7 @@ class VectorClock:
         # Initialize adjacency list and in-degree count
         adjacency: Dict[str, Set[str]] = defaultdict(set)
         in_degree: Dict[str, int] = defaultdict(int)
-        event_map: Dict[str, 'Event'] = {event.id: event for event in events}
+        event_map: Dict[str, Event] = {event.id: event for event in events}
 
         # Determine dependencies
         for event_a in events:
