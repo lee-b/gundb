@@ -5,7 +5,7 @@ description = "A globally unstoppable database: always locally writeable, multi-
 authors = ["Lee Braiden <lee.braiden@pm.me>"]
 license = "AGPLv3"
 packages = [
-    { include="gundb" },
+    { include="gundb", from="src" },
 ]
 
 [tool.poetry.scripts]
