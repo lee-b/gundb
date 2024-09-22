@@ -7,7 +7,7 @@ At the heart of GunDB is the implementation of conflict-free replication using v
 ### Vector Clocks:
 - Implemented in the `VectorClock` class (`vector_clock.py`)
 - Each event in the system is associated with a vector clock
-- Vector clocks are represented as dictionaries, where keys are stream IDs and values are integer counters
+- Vector clocks are represented as dictionaries, where keys are stream IDs and values are integer counters. The idea is that you build tools/services that track the latest eventsource ids of event types that they are basing their creation of new events on. EventStreams are not yet, but will be) per source site where the event originated, avoidng the need to synchronise clocks between sites before writing new events.  These counters or "clocks" per source stream are your dependencies for events that you create.  Thus, we can sort all events in order of dependency, globally, and per site, according to whatever site-to-site connectivity any given site/node has at any given time.  So long as the events themselves do not allow creating logically inconsistent field values (such as Person with the status 'dead' later being assigned the status 'alive' **based upon the source events visible to you**) then (theoretically, at least) there is no chance of conflict or inconsistent data.  Note that this latter requirement is a business logic requirement though, and not core to gundb's operation.
 - The `VectorClock` class provides methods for incrementing clocks, comparing events, and sorting events based on their causal relationships
 
 ### Key operations:
