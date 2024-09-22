@@ -78,4 +78,4 @@ Contributions welcome! Open tickets or PR's at https://github.com/lee-b/gundb/.
 
 ## LICENSE
 
-Aferro General Public License, version 3.  Contact the [Lee Braiden](mailto:lee.braiden@pm.me) if you need to discuss other licensing options.
+Aferro General Public License, version 3.  Contact [Lee Braiden](mailto:lee.braiden@pm.me) if you need to discuss other licensing options.
