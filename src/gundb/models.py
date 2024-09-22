@@ -113,8 +113,9 @@ class Event(Base):
     }
 
     def __init__(self, stream: EventStream, vector_clock: VectorClock, data: BaseModel):
+        self.id = generate_uuid()
         self.stream_id = stream.id
-        self.vector_clock = vector_clock.to_dict()
+        self.vector_clock = {str(self.stream_id): str(self.id)}
         self.data = data.dict()
         self.type = self.__class__.__name__
         # The position will be set when the event is applied to the stream
