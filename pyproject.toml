@@ -15,6 +15,7 @@ gundb = "gundb.__main__:main"
 python = "^3.9"
 SQLAlchemy = "^2.0"
 psycopg2-binary = "^2.9"  # If using PostgreSQL
+pydantic = "^1.10"  # Added Pydantic dependency
 # Add other dependencies as needed
 
 [tool.poetry.dev-dependencies]

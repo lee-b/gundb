@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict, Any, Optional, List, Tuple, NewType
+from typing import Dict, Any, Optional, List, Tuple, NewType, Type
 from sqlalchemy import (
     Column,
     String,
@@ -15,6 +15,7 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
+from pydantic import BaseModel
 from .vector_clock import VectorClock
 from .site import Site, SiteUUID
 
@@ -40,8 +41,9 @@ class EventStream(Base):
     events = relationship("Event", back_populates="stream", cascade="all, delete-orphan")
     view = relationship("View", uselist=False, back_populates="stream", cascade="all, delete-orphan")
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, schema: Type[BaseModel]):
         self.name = name
+        self.schema = schema
 
     def update_with_events(self, events: List['Event'], site: Site):
         """
@@ -60,6 +62,12 @@ class EventStream(Base):
         
         self.view.apply_event(event)
         event.vector_clock = VectorClock.merge_and_increment(event.vector_clock, self.view.vector_clock, site, self)
+
+    def validate_data(self, data: Dict[str, Any]):
+        """
+        Validate the data against the Pydantic schema.
+        """
+        return self.schema(**data)
 
 class Event(Base):
     """
@@ -125,14 +133,19 @@ class View(Base):
         # Update vector clock
         self.vector_clock = VectorClock.merge(self.vector_clock, event.vector_clock)
 
-# Example of a specific EventStream
+# Example of a specific EventStream with Pydantic schema
+class UserSchema(BaseModel):
+    username: str
+    email: str
+    age: int
+
 class UserStream(EventStream):
     __mapper_args__ = {
         'polymorphic_identity': 'user_stream',
     }
 
     def __init__(self, name: str = "user_stream"):
-        super().__init__(name)
+        super().__init__(name, UserSchema)
 
 # Example of specific Events
 class UserCreatedEvent(Event):
