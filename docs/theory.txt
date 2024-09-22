@@ -1,60 +1,60 @@
-GunDB: Theory of Operation
+# GunDB: Theory of Operation
 
-1. Core Concept: Conflict-Free Replication using Vector Clocks
+## 1. Core Concept: Conflict-Free Replication using Vector Clocks
 
 At the heart of GunDB is the implementation of conflict-free replication using vector clocks. This approach allows for a distributed system where multiple nodes can make updates independently, while still maintaining a consistent global state.
 
-Vector Clocks:
-- Implemented in the VectorClock class (vector_clock.py)
+### Vector Clocks:
+- Implemented in the `VectorClock` class (`vector_clock.py`)
 - Each event in the system is associated with a vector clock
 - Vector clocks are represented as dictionaries, where keys are stream IDs and values are integer counters
-- The VectorClock class provides methods for incrementing clocks, comparing events, and sorting events based on their causal relationships
+- The `VectorClock` class provides methods for incrementing clocks, comparing events, and sorting events based on their causal relationships
 
-Key operations:
-- increment(stream_id): Increases the counter for a specific stream
-- _happened_before(vc1, vc2): Determines if one vector clock precedes another
-- sort_events(events): Sorts a list of events based on their causal relationships
+### Key operations:
+- `increment(stream_id)`: Increases the counter for a specific stream
+- `_happened_before(vc1, vc2)`: Determines if one vector clock precedes another
+- `sort_events(events)`: Sorts a list of events based on their causal relationships
 
 This implementation allows GunDB to handle concurrent updates across multiple nodes and determine the correct order of events, even in the face of network partitions or delays.
 
-2. SQLAlchemy Base Classes: EventStream and Event
+## 2. SQLAlchemy Base Classes: EventStream and Event
 
 GunDB simplifies the interface for working with event sourcing through the use of SQLAlchemy base classes:
 
-EventStream (models.py):
+### EventStream (`models.py`):
 - Base class for all event streams
 - Each stream type inherits from this class and provides a unique UUID
 - Represents a sequence of related events
 
-Event (models.py):
+### Event (`models.py`):
 - Base class for all events
-- Connected to an EventStream via a foreign key
+- Connected to an `EventStream` via a foreign key
 - Contains the actual data of the change, along with its associated vector clock
 
 These base classes provide a high-level abstraction for working with event sourcing, hiding the complexities of managing individual events and their relationships.
 
-3. View Class
+## 3. View Class
 
-The View class (models.py) represents the current state of a stream, updated by applying events. This allows for efficient querying of the current state without having to replay all events every time.
+The `View` class (`models.py`) represents the current state of a stream, updated by applying events. This allows for efficient querying of the current state without having to replay all events every time.
 
-Key method:
-- apply_event(event): Updates the view's state based on an incoming event
+### Key method:
+- `apply_event(event)`: Updates the view's state based on an incoming event
 
-4. Node Classes: EventSourceNode and EventSinkNode
+## 4. Node Classes: EventSourceNode and EventSinkNode
 
 GunDB introduces abstract base classes for nodes that can send and receive events:
 
-EventSourceNode (nodes.py):
+### EventSourceNode (`nodes.py`):
 - Abstract base class for nodes that send events
-- Defines the send_event method
+- Defines the `send_event` method
 
-EventSinkNode (nodes.py):
+### EventSinkNode (`nodes.py`):
 - Abstract base class for nodes that receive events
-- Defines the receive_event method
+- Defines the `receive_event` method
 
 These classes provide a framework for implementing the network communication layer of GunDB, allowing for easy integration of different network protocols or transport mechanisms.
 
-5. User-Friendly Abstractions
+## 5. User-Friendly Abstractions
 
 By combining these components, GunDB provides a user-friendly interface for building distributed, conflict-free applications:
 
