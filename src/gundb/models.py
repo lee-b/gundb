@@ -16,10 +16,9 @@ from sqlalchemy.orm import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from pydantic import BaseModel
-from .core_types import SiteUUID, EventStreamUUID, VectorClockType
-from .site import Site
-from .event_stream import EventStream, Base
-from .vector_clock import VectorClock
+from .site import Site, SiteUUID
+from .event_stream import EventStream, Base, EventStreamUUID
+from .vector_clock import VectorClock, VectorClockType
 
 def generate_uuid() -> uuid.UUID:
     """Generates a unique UUID."""
