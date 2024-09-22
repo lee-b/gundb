@@ -39,6 +39,7 @@ class EventStream(Base):
         Update the stream with a list of events, correctly sorting them using vector clocks.
         """
         from .vector_clock import VectorClock
+        from .models import Event  # Add this import
         sorted_events = VectorClock.sort_events(events)
         for event in sorted_events:
             self.apply_event(event, site)
@@ -48,6 +49,7 @@ class EventStream(Base):
         Apply a single event to the stream and update the view.
         """
         from .vector_clock import VectorClock
+        from .models import Event, View  # Add this import
         if not self.view:
             self.view = View(self.id)
         
