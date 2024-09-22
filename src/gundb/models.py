@@ -6,6 +6,7 @@ from sqlalchemy import (
     ForeignKey,
     DateTime,
     JSON,
+    Integer,
     create_engine,
     event as sqlalchemy_event,
 )
@@ -36,6 +37,7 @@ class EventStream(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=generate_uuid)
     name = Column(String, unique=True, nullable=False)
+    event_counter = Column(Integer, default=0, nullable=False)
 
     # Relationships
     events = relationship("Event", back_populates="stream", cascade="all, delete-orphan")
@@ -44,6 +46,7 @@ class EventStream(Base):
     def __init__(self, name: str, event_type: Type[BaseModel]):
         self.name = name
         self._event_type = event_type
+        self.event_counter = 0
 
     def update_with_events(self, events: List['Event'], site: Site):
         """
@@ -59,6 +62,9 @@ class EventStream(Base):
         """
         if not self.view:
             self.view = View(self.id)
+        
+        self.event_counter += 1
+        event.position = self.event_counter
         
         self.view.apply_event(event)
         event.vector_clock = VectorClock.merge_and_increment(event.vector_clock, self.view.vector_clock, site, self)
@@ -90,6 +96,7 @@ class Event(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=generate_uuid)
     stream_id = Column(UUID(as_uuid=True), ForeignKey('event_streams.id'), nullable=False)
+    position = Column(Integer, nullable=False)
     timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     vector_clock = Column(JSON, nullable=False)
     type = Column(String, nullable=False)
@@ -110,6 +117,7 @@ class Event(Base):
         self.vector_clock = vector_clock.to_dict()
         self.data = data.dict()
         self.type = self.__class__.__name__
+        # The position will be set when the event is applied to the stream
 
 class View(Base):
     """
