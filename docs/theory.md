@@ -7,7 +7,10 @@ At the heart of GunDB is the implementation of conflict-free replication using v
 ### Vector Clocks:
 - Implemented in the `VectorClock` class (`vector_clock.py`)
 - Each event in the system is associated with a vector clock
-- Vector clocks are represented as dictionaries, where keys are stream IDs and values are integer counters. The idea is that you build tools/services that track the latest eventsource ids of event types that they are basing their creation of new events on. EventStreams are not yet, but will be) per source site where the event originated, avoidng the need to synchronise clocks between sites before writing new events.  These counters or "clocks" per source stream are your dependencies for events that you create.  Thus, we can sort all events in order of dependency, globally, and per site, according to whatever site-to-site connectivity any given site/node has at any given time.  So long as the events themselves do not allow creating logically inconsistent field values (such as Person with the status 'dead' later being assigned the status 'alive' **based upon the source events visible to you**) then (theoretically, at least) there is no chance of conflict or inconsistent data.  Note that this latter requirement is a business logic requirement though, and not core to gundb's operation.
+- Vector clocks are represented as dictionaries, where keys are stream IDs and values are integer counters.
+- The idea is that you build tools/services that track the latest eventsource ids of event types that they are basing their creation of new events on. Events are per source site (each of which has a uuid) where the Event originated, avoiding the need to synchronise/know the latest EventStream clock value between sites before adding new Events.
+- These counters or "clocks" per source site EventStream are your dependencies for events that you create.  So long as your Event is after the events it depends on (and your business logic is not broken) all is good.
+- Thus, we can sort all Events in order of dependency, globally, and per site, according to whatever site-to-site connectivity any given site/node has at any given time.  
 - The `VectorClock` class provides methods for incrementing clocks, comparing events, and sorting events based on their causal relationships
 
 ### Key operations:
@@ -66,3 +69,8 @@ By combining these components, GunDB provides a user-friendly interface for buil
 This abstraction layer allows developers to focus on their application logic without having to directly manage the intricacies of global replication, CRDTs, or the CAP theorem. The system ensures that data is always locally available for writing and that conflicts are resolved automatically using the vector clock mechanism.
 
 In summary, GunDB combines the power of event sourcing, vector clocks, and SQLAlchemy to provide a robust foundation for building distributed, conflict-free database systems. The carefully designed abstractions make it accessible to developers while handling the complex distributed systems challenges under the hood.
+
+## 6. Business Logic consistency
+
+So long as the Events themselves do not allow creating logically inconsistent field values (such as Person with the status 'dead' later being assigned the status 'alive' **based upon the source events visible to you**) then (theoretically, at least; bug reports welcome!) there is no chance of conflict or inconsistent data.  Note that this is a business logic requirement though, and not core to gundb's operation.
+
