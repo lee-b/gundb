@@ -41,9 +41,9 @@ class EventStream(Base):
     events = relationship("Event", back_populates="stream", cascade="all, delete-orphan")
     view = relationship("View", uselist=False, back_populates="stream", cascade="all, delete-orphan")
 
-    def __init__(self, name: str, schema: Type[BaseModel]):
+    def __init__(self, name: str, event_type: Type[BaseModel]):
         self.name = name
-        self._schema = schema
+        self._event_type = event_type
 
     def update_with_events(self, events: List['Event'], site: Site):
         """
@@ -65,15 +65,21 @@ class EventStream(Base):
 
     def validate_data(self, data: Dict[str, Any]):
         """
-        Validate the data against the Pydantic schema.
+        Validate the data against the Pydantic event type.
         """
-        return self._schema(**data)
+        return self._event_type(**data)
 
-    def get_schema(self) -> Type[BaseModel]:
+    def get_type(self) -> Type[BaseModel]:
         """
-        Return the Pydantic schema type associated with this EventStream.
+        Return the Pydantic event type associated with this EventStream.
         """
-        return self._schema
+        return self._event_type
+
+    def get_schema(self) -> Dict[str, Any]:
+        """
+        Return the JSON schema of the Pydantic event type.
+        """
+        return self._event_type.schema()
 
 class Event(Base):
     """
@@ -138,8 +144,8 @@ class View(Base):
         # Update vector clock
         self.vector_clock = VectorClock.merge(self.vector_clock, event.vector_clock)
 
-# Example of a specific EventStream with Pydantic schema
-class UserSchema(BaseModel):
+# Example of a specific EventStream with Pydantic event type
+class UserEvent(BaseModel):
     username: str
     email: str
     age: int
@@ -150,7 +156,7 @@ class UserStream(EventStream):
     }
 
     def __init__(self, name: str = "user_stream"):
-        super().__init__(name, UserSchema)
+        super().__init__(name, UserEvent)
 
 # Example of specific Events
 class UserCreatedEvent(Event):
