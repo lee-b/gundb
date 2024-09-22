@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict, Any, Optional, List, Tuple, NewType, Type, Iterator
+from typing import Dict, Any, Optional, List, Iterator
 from sqlalchemy import (
     Column,
     String,
@@ -11,86 +11,18 @@ from sqlalchemy import (
     event as sqlalchemy_event,
 )
 from sqlalchemy.orm import (
-    declarative_base,
     relationship,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from pydantic import BaseModel
-from .vector_clock import VectorClock
-from .site import Site, SiteUUID
-
-Base = declarative_base()
-
-EventStreamUUID = NewType('EventStreamUUID', uuid.UUID)
+from .core_types import SiteUUID, EventStreamUUID, VectorClockType
+from .site import Site
+from .event_stream import EventStream, Base
 
 def generate_uuid() -> uuid.UUID:
     """Generates a unique UUID."""
     return uuid.uuid4()
-
-class EventStream(Base):
-    """
-    Base class for all Event Streams.
-    Each stream type should inherit from this class and provide a unique UUID.
-    """
-    __tablename__ = 'event_streams'
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=generate_uuid)
-    name = Column(String, unique=True, nullable=False)
-    event_counter = Column(Integer, default=0, nullable=False)
-    latest_merged_event_counter = Column(Integer, default=0, nullable=False)
-
-    # Relationships
-    events = relationship("Event", back_populates="stream", cascade="all, delete-orphan")
-    view = relationship("View", uselist=False, back_populates="stream", cascade="all, delete-orphan")
-
-    def __init__(self, name: str, event_type: Type[BaseModel]):
-        self.name = name
-        self._event_type = event_type
-        self.event_counter = 0
-        self.latest_merged_event_counter = 0
-
-    def update_with_events(self, events: List['Event'], site: Site):
-        """
-        Update the stream with a list of events, correctly sorting them using vector clocks.
-        """
-        sorted_events = VectorClock.sort_events(events)
-        for event in sorted_events:
-            self.apply_event(event, site)
-
-    def apply_event(self, event: 'Event', site: Site):
-        """
-        Apply a single event to the stream and update the view.
-        """
-        if not self.view:
-            self.view = View(self.id)
-        
-        self.event_counter += 1
-        event.position = self.event_counter
-        
-        self.view.apply_event(event)
-        event.vector_clock = VectorClock.merge_and_increment(event.vector_clock, self.view.vector_clock, site, self)
-        
-        # Update the latest merged event counter
-        self.latest_merged_event_counter = max(self.latest_merged_event_counter, event.position)
-
-    def validate_data(self, data: Dict[str, Any]):
-        """
-        Validate the data against the Pydantic event type.
-        """
-        return self._event_type(**data)
-
-    def get_type(self) -> Type[BaseModel]:
-        """
-        Return the Pydantic event type associated with this EventStream.
-        """
-        return self._event_type
-
-    def get_schema(self) -> Dict[str, Any]:
-        """
-        Return the JSON schema of the Pydantic event type.
-        """
-        return self._event_type.schema()
 
 class Event(Base):
     """
@@ -117,7 +49,7 @@ class Event(Base):
         'polymorphic_on': type
     }
 
-    def __init__(self, stream: EventStream, vector_clock: VectorClock, data: BaseModel):
+    def __init__(self, stream: EventStream, vector_clock: VectorClockType, data: BaseModel):
         self.id = generate_uuid()
         self.stream_id = stream.id
         self.vector_clock = {str(self.stream_id): str(self.id)}
@@ -126,14 +58,15 @@ class Event(Base):
         # The position will be set when the event is applied to the stream
 
     @classmethod
-    def events_as_vector_clock(cls, events: Iterator['Event']) -> VectorClock:
+    def events_as_vector_clock(cls, events: Iterator['Event']) -> VectorClockType:
         """
         Convert a sequence of events into a single VectorClock.
         """
+        from .vector_clock import VectorClock
         combined_clock = {}
         for event in events:
             combined_clock = VectorClock.merge(combined_clock, event.vector_clock)
-        return VectorClock(combined_clock)
+        return combined_clock
 
 class View(Base):
     """
@@ -149,12 +82,12 @@ class View(Base):
     # Relationships
     stream = relationship("EventStream", back_populates="view")
 
-    def __init__(self, stream_id: EventStreamUUID, snapshot: Optional[Dict[str, Any]] = None, vector_clock: Optional[Dict[Tuple[SiteUUID, EventStreamUUID], int]] = None):
+    def __init__(self, stream_id: EventStreamUUID, snapshot: Optional[Dict[str, Any]] = None, vector_clock: Optional[VectorClockType] = None):
         self.stream_id = stream_id
         self.snapshot = snapshot or {}
         self.vector_clock = vector_clock or {}
 
-    def apply_event(self, event: 'Event'):
+    def apply_event(self, event: Event):
         """
         Apply an event to update the snapshot and vector clock.
         """
@@ -166,6 +99,7 @@ class View(Base):
                     self.snapshot.pop(key, None)
         
         # Update vector clock
+        from .vector_clock import VectorClock
         self.vector_clock = VectorClock.merge(self.vector_clock, event.vector_clock)
 
 # Example of a specific EventStream with Pydantic event type
