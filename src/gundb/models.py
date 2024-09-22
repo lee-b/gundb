@@ -38,6 +38,7 @@ class EventStream(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=generate_uuid)
     name = Column(String, unique=True, nullable=False)
     event_counter = Column(Integer, default=0, nullable=False)
+    latest_merged_event_counter = Column(Integer, default=0, nullable=False)
 
     # Relationships
     events = relationship("Event", back_populates="stream", cascade="all, delete-orphan")
@@ -47,6 +48,7 @@ class EventStream(Base):
         self.name = name
         self._event_type = event_type
         self.event_counter = 0
+        self.latest_merged_event_counter = 0
 
     def update_with_events(self, events: List['Event'], site: Site):
         """
@@ -68,6 +70,9 @@ class EventStream(Base):
         
         self.view.apply_event(event)
         event.vector_clock = VectorClock.merge_and_increment(event.vector_clock, self.view.vector_clock, site, self)
+        
+        # Update the latest merged event counter
+        self.latest_merged_event_counter = max(self.latest_merged_event_counter, event.position)
 
     def validate_data(self, data: Dict[str, Any]):
         """
