@@ -1,5 +1,9 @@
 # GunDB: Theory of Operation
 
+
+![](../media/data_flow_and_recovery.png)
+
+
 ## 1. Core Concept: Conflict-Free Replication using Vector Clocks
 
 At the heart of GunDB is the implementation of conflict-free replication using vector clocks. This approach allows for a distributed system where multiple nodes can make updates independently, while still maintaining a consistent global state.

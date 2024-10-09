@@ -1,0 +1,58 @@
+@startuml
+title GunDB Data Flow and Recovery Mechanisms - Sequence Diagram
+
+' Participants
+actor UserA
+participant NodeA
+database DBA
+
+actor UserB
+participant NodeB
+database DBB
+
+actor UserC
+participant NodeC
+database DBC
+
+== Event Creation ==
+
+UserA -> NodeA: Write Event E1
+NodeA -> DBA: Store E1 with Vector Clock VC1
+
+UserB -> NodeB: Write Event E2
+NodeB -> DBB: Store E2 with Vector Clock VC2
+
+UserC -> NodeC: Write Event E3
+NodeC -> DBC: Store E3 with Vector Clock VC3
+
+== Network Partition Occurs ==
+
+== During Partition - Limited Communication ==
+
+NodeA -> NodeB: Send Event E1 [Fails]
+NodeB -> NodeA: Send Event E2 [Fails]
+NodeC -> NodeA: Send Event E3 [Fails]
+NodeC -> NodeB: Send Event E3 [Fails]
+
+== Network Partition Ends ==
+
+== Event Synchronization ==
+
+NodeA -> NodeB: Send Event E1
+NodeB -> NodeA: Send Event E2
+NodeC -> NodeA: Send Event E3
+NodeC -> NodeB: Send Event E3
+
+NodeB -> DBB: Merge E1 using Vector Clocks
+NodeA -> DBA: Merge E2 and E3 using Vector Clocks
+NodeB -> DBB: Merge E3 using Vector Clocks
+NodeC -> DBC: Merge E1 and E2 using Vector Clocks
+
+== Updating Views ==
+
+NodeA -> NodeA: Update View with E2 and E3
+NodeB -> NodeB: Update View with E1 and E3
+NodeC -> NodeC: Update View with E1 and E2
+
+== Consistent State Achieved ==
+@enduml
