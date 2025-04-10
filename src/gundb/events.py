@@ -1,6 +1,6 @@
 from typing import Dict, Any, Type
 from pydantic import BaseModel
-from sqlalchemy.orm import DeclarativeBase
+from .base import Base
 from .core_types import EventStreamUUID, VectorClockType, EventUUID
 from .site import Site
 from .event_stream import EventStream

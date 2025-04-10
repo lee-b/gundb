@@ -1,10 +1,9 @@
 from typing import Dict, Any, Type
 from pydantic import BaseModel
 from sqlalchemy import Column, ForeignKey, JSON
-from sqlalchemy.orm import DeclarativeBase
+from .base import Base
 from .core_types import EventStreamUUID, VectorClockType, EventUUID
 from .site import Site
-from .models import Base
 from .event_stream import generate_uuid
 
 class Event(Base):

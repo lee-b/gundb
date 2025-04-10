@@ -1,10 +1,10 @@
 from typing import Dict, Any, Type, List
 import uuid
 from pydantic import BaseModel
-from sqlalchemy.orm import DeclarativeBase
+from .base import Base
 from .core_types import EventStreamUUID
 from .site import Site
-from .event import Event  # Change this import
+from .event import Event
 
 class Base(DeclarativeBase):
     pass
