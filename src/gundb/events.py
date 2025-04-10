@@ -6,9 +6,6 @@ from .site import Site
 from .event_stream import EventStream
 from .event import Event
 
-class Base(DeclarativeBase):
-    pass
-
 class UserEvent(BaseModel):
     pass
 

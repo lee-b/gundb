@@ -6,9 +6,6 @@ from .core_types import EventStreamUUID
 from .site import Site
 from .event import Event
 
-class Base(DeclarativeBase):
-    pass
-
 class EventStream(Base):
     """
     Base class for all Event Streams.
