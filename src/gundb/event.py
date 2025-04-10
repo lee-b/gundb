@@ -4,6 +4,7 @@ from sqlalchemy import Column, ForeignKey, JSON
 from .base import Base
 from .core_types import EventStreamUUID, VectorClockType, EventUUID
 from .site import Site
+from .utils import generate_uuid
 
 class Event(Base):
     __tablename__ = 'events'
