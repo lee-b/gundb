@@ -153,5 +153,42 @@ def test_vector_clock_update(db_session):
     assert user_stream.event_counter == 2
     assert user_stream.latest_merged_event_counter == 2
 
+def test_event_stream_error_handling(db_session):
+    user_stream = UserStream()
+    db_session.add(user_stream)
+    db_session.commit()
+
+    # Test invalid event data
+    with pytest.raises(ValueError):
+        user_stream.validate_data({"username": "invalid_user", "email": "invalid@example.com"})
+
+    # Test applying an event with an invalid vector clock
+    invalid_event = UserCreatedEvent(stream=user_stream, vector_clock={"invalid": 1}, data=UserEvent(username="test_user", email="test@example.com", age=30))
+    with pytest.raises(ValueError):
+        user_stream.apply_event(invalid_event, Site())
+
+def test_event_stream_concurrency(db_session):
+    user_stream = UserStream()
+    db_session.add(user_stream)
+    db_session.commit()
+
+    site1 = Site()
+    site2 = Site()
+
+    # Create two concurrent events
+    event1 = UserCreatedEvent(stream=user_stream, vector_clock={}, data=UserEvent(username="user1", email="user1@example.com", age=25))
+    event2 = UserCreatedEvent(stream=user_stream, vector_clock={}, data=UserEvent(username="user2", email="user2@example.com", age=26))
+
+    # Apply events from different sites
+    user_stream.apply_event(event1, site1)
+    user_stream.apply_event(event2, site2)
+
+    db_session.commit()
+
+    # Check if both events are applied correctly
+    assert user_stream.event_counter == 2
+    assert user_stream.latest_merged_event_counter == 2
+    assert user_stream.view.snapshot == {"username": "user2", "email": "user2@example.com", "age": 26}
+
 if __name__ == "__main__":
     pytest.main()
