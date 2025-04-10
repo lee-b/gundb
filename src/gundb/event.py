@@ -4,7 +4,6 @@ from sqlalchemy import Column, ForeignKey, JSON
 from .base import Base
 from .core_types import EventStreamUUID, VectorClockType, EventUUID
 from .site import Site
-from .event_stream import generate_uuid
 
 class Event(Base):
     __tablename__ = 'events'
@@ -19,4 +18,3 @@ class Event(Base):
         self.vector_clock = vector_clock
         self.data = data.dict()
 
-from .event_stream import EventStream

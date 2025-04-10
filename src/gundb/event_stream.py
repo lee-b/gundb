@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from .base import Base
 from .core_types import EventStreamUUID
 from .site import Site
-from .event import Event
+from .utils import generate_uuid
 
 class EventStream(Base):
     """
