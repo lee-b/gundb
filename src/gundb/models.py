@@ -2,8 +2,9 @@ from typing import Dict, Any, Optional, List
 from pydantic import BaseModel
 from sqlalchemy.orm import DeclarativeBase
 from .core_types import EventStreamUUID, VectorClockType
-from .events import Event, UserEvent, UserCreatedEvent, UserUpdatedEvent
+from .events import UserEvent, UserCreatedEvent, UserUpdatedEvent
 from .event_stream import EventStream, Base
+from .event import Event
 
 class View(Base):
     """

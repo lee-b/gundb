@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from .models import Event
+from .event import Event
 
 class EventSourceNode(ABC):
     """

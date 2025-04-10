@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import DeclarativeBase
 from .core_types import EventStreamUUID
 from .site import Site
-from .events import Event  # Add this import
+from .event import Event  # Change this import
 
 class Base(DeclarativeBase):
     pass
