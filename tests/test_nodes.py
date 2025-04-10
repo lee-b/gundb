@@ -1,7 +1,12 @@
+import sys
+import os
 import pytest
 from gundb.nodes import EventSourceNode, EventSinkNode
 from gundb.models import Event, UserStream, UserEvent, UserCreatedEvent
 from gundb.site import Site
+
+# Add the parent directory to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 class MockEventSourceNode(EventSourceNode):
     def send_event(self, event: Event):
