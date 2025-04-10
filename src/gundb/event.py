@@ -7,15 +7,16 @@ from .site import Site
 class Base(DeclarativeBase):
     pass
 
-class Event(Base):
-    """
-    Base class for all Events.
-    Connected to an EventStream via foreign key.
-    """
-    def __init__(self, stream, vector_clock: VectorClockType, data: BaseModel):
-        self.id: EventUUID
-        self.stream_id: EventStreamUUID
-        self.vector_clock: VectorClockType = vector_clock
-        self.data: Dict[str, Any] = data.dict()
+__tablename__ = 'events'
+
+id = Column(EventUUID, primary_key=True, default=generate_uuid)
+stream_id = Column(EventStreamUUID, ForeignKey('event_streams.id'), nullable=False)
+vector_clock = Column(JSON, nullable=False)
+data = Column(JSON, nullable=False)
+
+def __init__(self, stream, vector_clock: VectorClockType, data: BaseModel):
+    self.stream_id = stream.id
+    self.vector_clock = vector_clock
+    self.data = data.dict()
 
 from .event_stream import EventStream
