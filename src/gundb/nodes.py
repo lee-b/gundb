@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from .event import Event
 
 class EventSourceNode(ABC):
     """
@@ -15,6 +14,8 @@ class EventSinkNode(ABC):
     Abstract base class for nodes that receive events.
     """
     @abstractmethod
-    def receive_event(self, event: Event):
+    def receive_event(self, event):
         """Receive an event from other nodes."""
         pass
+
+from .event import Event
