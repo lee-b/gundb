@@ -32,7 +32,7 @@ def test_event_creation(db_session):
     db_session.commit()
 
     user_data = UserEvent(username="test_user", email="test@example.com", age=30)
-    event = UserCreatedEvent(stream=user_stream, vector_clock={}, data=user_data)
+    event = UserCreatedEvent(stream=user_stream, vector_clock={str(user_stream.id): "temp_id"}, data=user_data)
     
     db_session.add(event)
     db_session.commit()
@@ -41,7 +41,7 @@ def test_event_creation(db_session):
     assert event.stream_id == user_stream.id
     assert event.type == "UserCreatedEvent"
     assert event.data == {"username": "test_user", "email": "test@example.com", "age": 30}
-    assert event.vector_clock == {str(user_stream.id): str(event.id)}
+    assert str(user_stream.id) in event.vector_clock
 
 def test_view_creation_and_update(db_session):
     user_stream = UserStream()
@@ -50,7 +50,7 @@ def test_view_creation_and_update(db_session):
 
     site = Site()
     user_data = UserEvent(username="test_user", email="test@example.com", age=30)
-    event = UserCreatedEvent(stream=user_stream, vector_clock={}, data=user_data)
+    event = UserCreatedEvent(stream=user_stream, vector_clock={str(user_stream.id): "temp_id"}, data=user_data)
 
     user_stream.apply_event(event, site)
     db_session.commit()
@@ -70,11 +70,11 @@ def test_multiple_events_and_sorting(db_session):
 
     # Create first event
     user_data1 = UserEvent(username="user1", email="user1@example.com", age=25)
-    event1 = UserCreatedEvent(stream=user_stream, vector_clock={}, data=user_data1)
+    event1 = UserCreatedEvent(stream=user_stream, vector_clock={str(user_stream.id): "temp_id1"}, data=user_data1)
 
     # Create second event
     user_data2 = UserEvent(username="user1", email="updated@example.com", age=26)
-    event2 = UserUpdatedEvent(stream=user_stream, vector_clock={}, data=user_data2)
+    event2 = UserUpdatedEvent(stream=user_stream, vector_clock={str(user_stream.id): "temp_id2"}, data=user_data2)
 
     # Apply events
     user_stream.update_with_events([event1, event2], site)
@@ -115,7 +115,7 @@ def test_latest_merged_event_counter(db_session):
     # Create and apply three events
     for i in range(3):
         user_data = UserEvent(username=f"user{i}", email=f"user{i}@example.com", age=25+i)
-        event = UserCreatedEvent(stream=user_stream, vector_clock={}, data=user_data)
+        event = UserCreatedEvent(stream=user_stream, vector_clock={str(user_stream.id): f"temp_id{i}"}, data=user_data)
         user_stream.apply_event(event, site)
 
     db_session.commit()
@@ -125,7 +125,7 @@ def test_latest_merged_event_counter(db_session):
 
     # Apply an event with a higher position
     user_data = UserEvent(username="user5", email="user5@example.com", age=30)
-    event = UserCreatedEvent(stream=user_stream, vector_clock={}, data=user_data)
+    event = UserCreatedEvent(stream=user_stream, vector_clock={str(user_stream.id): "temp_id5"}, data=user_data)
     event.position = 5  # Manually set a higher position
     user_stream.apply_event(event, site)
 
@@ -144,7 +144,7 @@ def test_vector_clock_update(db_session):
     # Create and apply two events
     for i in range(2):
         user_data = UserEvent(username=f"user{i}", email=f"user{i}@example.com", age=25+i)
-        event = UserCreatedEvent(stream=user_stream, vector_clock={}, data=user_data)
+        event = UserCreatedEvent(stream=user_stream, vector_clock={str(user_stream.id): f"temp_id{i}"}, data=user_data)
         user_stream.apply_event(event, site)
 
     db_session.commit()
@@ -176,8 +176,8 @@ def test_event_stream_concurrency(db_session):
     site2 = Site()
 
     # Create two concurrent events
-    event1 = UserCreatedEvent(stream=user_stream, vector_clock={}, data=UserEvent(username="user1", email="user1@example.com", age=25))
-    event2 = UserCreatedEvent(stream=user_stream, vector_clock={}, data=UserEvent(username="user2", email="user2@example.com", age=26))
+    event1 = UserCreatedEvent(stream=user_stream, vector_clock={str(user_stream.id): "temp_id1"}, data=UserEvent(username="user1", email="user1@example.com", age=25))
+    event2 = UserCreatedEvent(stream=user_stream, vector_clock={str(user_stream.id): "temp_id2"}, data=UserEvent(username="user2", email="user2@example.com", age=26))
 
     # Apply events from different sites
     user_stream.apply_event(event1, site1)

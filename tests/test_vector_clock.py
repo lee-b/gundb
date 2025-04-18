@@ -48,10 +48,12 @@ def test_sort_events_concurrent_events():
     event3 = create_mock_event("3", {"A":1, "B":1}, datetime.now() + timedelta(seconds=2))
 
     events = [event2, event1, event3]
-    sorted_events = VectorClock.sort_events(events)
-
-    # event1 and event2 are concurrent; sorted by timestamp then id
-    assert [e.id for e in sorted_events] == ["1", "2", "3"]
+    
+    # Expect an exception due to concurrent events, as per design to limit to sortable events
+    with pytest.raises(Exception) as exc_info:
+        VectorClock.sort_events(events)
+    
+    assert "Concurrent events detected" in str(exc_info.value) or "conflict" in str(exc_info.value).lower()
 
 def test_sort_events_cycle_detection():
     # Create mock events with cyclic dependencies (invalid vector clocks)

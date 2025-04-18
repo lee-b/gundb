@@ -1,20 +1,32 @@
 from typing import Dict, Any, Type, List
 import uuid
 from pydantic import BaseModel
+from sqlalchemy import Column, String, Integer
+from sqlalchemy.dialects.postgresql import UUID
 from .base import Base
 from .core_types import EventStreamUUID
 from .site import Site
 from .utils import generate_uuid
+
+# Import Event after its definition to avoid circular dependency issues
+from .event import Event
 
 class EventStream(Base):
     """
     Base class for all Event Streams.
     Each stream type should inherit from this class and provide a unique UUID.
     """
+    __tablename__ = 'event_streams'
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=generate_uuid)
+    name = Column("name", String)
+    event_counter = Column(Integer, default=0)
+
     def __init__(self, name: str, event_type: Type[BaseModel]):
         self.id: EventStreamUUID = EventStreamUUID(uuid.uuid4())
         self.name: str = name
         self._event_type: Type[BaseModel] = event_type
+        self.event_counter: int = 0
 
     def update_with_events(self, events: List[Event], site: Site):
         for event in events:
@@ -25,13 +37,16 @@ class EventStream(Base):
         raise NotImplementedError
 
     def validate_data(self, data: Dict[str, Any]):
-        return self._event_type(**data)
+        try:
+            return self._event_type.model_validate(data)
+        except ValueError as e:
+            raise ValueError(f"Invalid data for {self._event_type.__name__}: {str(e)}")
 
     def get_type(self) -> Type[BaseModel]:
         return self._event_type
 
     def get_schema(self) -> Dict[str, Any]:
-        return self._event_type.schema()
+        return self._event_type.model_json_schema()
 
 def generate_uuid() -> uuid.UUID:
     return uuid.uuid4()

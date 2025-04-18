@@ -48,16 +48,30 @@ class VectorClock:
         return less_or_equal and strictly_less
 
     @staticmethod
+    def _has_conflict(vc1: VectorClockType, vc2: VectorClockType) -> bool:
+        """
+        Determines if there is a conflict between two vector clocks that could indicate a cycle.
+        A conflict is detected if neither clock happened before the other and
+        each has at least one key with a strictly greater value than the other,
+        indicating conflicting updates that cannot be resolved causally.
+        """
+        if VectorClock._happened_before(vc1, vc2) or VectorClock._happened_before(vc2, vc1):
+            return False
+        has_greater_in_vc1 = any(vc1.get(k, 0) > vc2.get(k, 0) for k in vc1)
+        has_greater_in_vc2 = any(vc2.get(k, 0) > vc1.get(k, 0) for k in vc2)
+        return has_greater_in_vc1 and has_greater_in_vc2
+
+    @staticmethod
     def sort_events(events: List[Event]) -> List[Event]:
         """
         Sort events based on their vector clocks to respect causal dependencies.
         Implements a topological sort where edges represent 'happened-before' relationships.
-        Concurrent events (no causal relationship) are sorted by timestamp, then by UUID.
+        Concurrent events (no causal relationship) are rejected to enforce total ordering.
         """
         if not events:
             return []
 
-        # Build a dependency graph
+        # Build a dependency graph based strictly on happened_before relationships
         n = len(events)
         graph = [[] for _ in range(n)]
         in_degree = [0] * n
@@ -70,7 +84,34 @@ class VectorClock:
                         graph[i].append(j)
                         in_degree[j] += 1
 
-        # Check for cycles using a modified Kahn's algorithm
+        # Check for cycles using DFS based on happened_before relationships
+        visited = set()
+        rec_stack = set()
+
+        def detect_cycle(node):
+            visited.add(node)
+            rec_stack.add(node)
+            for neighbor in graph[node]:
+                if neighbor not in visited:
+                    if detect_cycle(neighbor):
+                        return True
+                elif neighbor in rec_stack:
+                    return True
+            rec_stack.remove(node)
+            return False
+
+        # Run cycle detection on all unvisited nodes
+        cycle_detected = False
+        for i in range(n):
+            if i not in visited:
+                if detect_cycle(i):
+                    cycle_detected = True
+                    break
+
+        if cycle_detected:
+            raise Exception("Cyclic dependencies detected in event vector clocks")
+
+        # Perform topological sort using Kahn's algorithm
         queue = []
         for i in range(n):
             if in_degree[i] == 0:
@@ -90,6 +131,24 @@ class VectorClock:
 
         # Convert indices back to events
         result = [events[i] for i in sorted_indices]
+
+        # Additional check for conflicting vector clocks that indicate concurrency or cycles
+        for i in range(n):
+            for j in range(n):
+                if i != j and VectorClock._has_conflict(events[i].vector_clock, events[j].vector_clock):
+                    # Check if this conflict could imply a cycle by examining if there are mutual dependencies
+                    # A cycle in vector clocks is when conflicting clocks have values suggesting circular dependency
+                    # For example, vc1: {A:1, B:2} and vc2: {A:2, B:1} suggest a cycle
+                    conflict_keys = set(events[i].vector_clock.keys()).intersection(events[j].vector_clock.keys())
+                    if conflict_keys:
+                        cycle_suspected = True
+                        for k in conflict_keys:
+                            if not ((events[i].vector_clock[k] > events[j].vector_clock[k]) or (events[j].vector_clock[k] > events[i].vector_clock[k])):
+                                cycle_suspected = False
+                                break
+                        if cycle_suspected:
+                            raise Exception("Cyclic dependencies detected in event vector clocks")
+                    raise Exception("Concurrent events detected; only causally ordered events are allowed in EventStreams")
 
         # For concurrent events (those not ordered by causality), sort by timestamp and ID
         final_result = []

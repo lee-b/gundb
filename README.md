@@ -16,7 +16,8 @@
 - **Arbitrary topology**: Run it on servers remotely AND key-value index files on IoT.  Run three nodes locally and/or five nodes over five WANs. Your call. Unlike some globally replicated database solutions, GunDB doesn't dictate crazy things like 3 highly available database per site and redundant low-latency WAN links.
 - **Conflict-Free Replicated Data Types (CRDTs)**: Guarantees eventual consistency without the complexities of conflict resolution.
 - **Global Event Sourcing**: Captures all changes as a sequence of events, enabling auditability, rollback capabilities, and real-time data processing.
-- **Arbitrary data synchronization methods**: the actual synchronization method between nodes doesn't matter to the core design; it's a simple, abstract interface for which many implementations are possible. They could vary from high-speed WANs with financial data, custom XML data embedded in RSS feeds, email attachments, or occasional updates on tape. The first implementation will proably be gRPC, though... or something like that.
+- **Total Ordering in EventStreams**: Enforces a linear sequence of events within streams, rejecting concurrent events for deterministic state management. Events can be flattened to database records/tables and unflattened back to updates, similar to Kafka's ordered log model.
+- **Arbitrary data synchronization methods**: the actual synchronization method between nodes doesn't matter to the core design; it's a simple, abstract interface for which many implementations are possible. They could vary from high-speed WANs with financial data, custom XML data embedded in RSS feeds, email attachments, or occasional updates on tape. The first implementation will probably be gRPC, though... or something like that.
 
 ## Current Status
 
